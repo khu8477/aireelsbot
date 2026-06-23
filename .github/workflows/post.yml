@@ -2,8 +2,7 @@ name: Post Reels لـ GitHub Actions
 
 on:
   schedule:
-    # ينشر كل يوم مع 8 الصباح بتوقيت UTC
-    # 8 الصباح UTC = 9 الصباح بتوقيت المغرب
+    # ينشر كل يوم مع 8 الصباح UTC = 9 الصباح بتوقيت المغرب
     - cron: '0 8 *'
   workflow_dispatch:
 
