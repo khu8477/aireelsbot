@@ -1,24 +1,23 @@
+name: Auto Story Bot
+on:
+  push:
+  workflow_dispatch:
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          node-version: '20' # تحديث إصدار النود
-
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg imagemagick
           pip install -r requirements.txt
-
-      - name: Run Bot
+      - name: Run bot
         run: python bot.py
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
