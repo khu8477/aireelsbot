@@ -1,5 +1,7 @@
-moviepy
+moviepy==1.0.3
 gTTS
 google-generativeai
 requests
 imageio[ffmpeg]
+Pillow
+
