@@ -25,7 +25,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install google-generativeai requests moviepy edge-tts fal-client telebot
+          pip install -r requirements.txt
 
       - name: Run Bot
         run: python bot.py
