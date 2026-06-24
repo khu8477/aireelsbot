@@ -1,31 +1,23 @@
-name: Auto Story Bot
+name: Auto Daily Post
 on:
-  push:
-  workflow_dispatch:
   schedule:
     - cron: '0 13 * * *'
-
+  workflow_dispatch:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install Dependencies
+      - uses: actions/checkout@v4
+      - name: Setup
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg imagemagick
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run bot
+          sudo apt-get install -y ffmpeg
+          pip install google-generativeai requests moviepy edge-tts fal-client
+      - name: Run
         run: python bot.py
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           FAL_KEY: ${{ secrets.FAL_KEY }}
+          PIXVERSE_KEY: ${{ secrets.PIXVERSE_KEY }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
