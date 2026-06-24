@@ -3,18 +3,33 @@ import requests
 import google.generativeai as genai
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
-# إعدادات البيئة
+# إعدادات النظام
 os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 
-# جلب المفاتيح
+# جلب المفاتيح من متغيرات البيئة
 GEMINI_KEY = os.getenv("GEMINI_KEY")
 FAL_KEY = os.getenv("FAL_KEY")
 FB_TOKEN = os.getenv("FB_TOKEN")
 FB_PAGE_ID = os.getenv("FB_PAGE_ID")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # إعداد Gemini
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+def send_telegram_msg(text):
+    """إرسال رسالة نصية لتلغرام"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": text})
+
+def send_to_telegram(video_path):
+    """إرسال الفيديو النهائي لتلغرام"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendVideo"
+    with open(video_path, 'rb') as video:
+        files = {'video': video}
+        data = {'chat_id': TELEGRAM_CHAT_ID, 'caption': "🤖 تم إنشاء القصة ونشرها بنجاح!"}
+        requests.post(url, data=data, files=files)
 
 def generate_image(prompt):
     url = "https://fal.run/fal-ai/flux/dev"
@@ -45,21 +60,16 @@ def generate_video_from_image(image_url):
         return None
 
 def post_to_facebook(video_path):
-    if not FB_TOKEN or not FB_PAGE_ID:
-        print("❌ بيانات فيسبوك ناقصة في الـ Secrets.")
-        return
     url = f"https://graph.facebook.com/{FB_PAGE_ID}/videos"
-    data = {"access_token": FB_TOKEN, "description": "قصة جديدة تم توليدها بالذكاء الاصطناعي! 🤖✨"}
+    data = {"access_token": FB_TOKEN, "description": "قصة جديدة من إبداع الذكاء الاصطناعي 🚀"}
     with open(video_path, 'rb') as f:
         files = {"file": f}
         response = requests.post(url, data=data, files=files)
-    if response.status_code == 200:
-        print("✅ تم النشر على فيسبوك بنجاح!")
-    else:
-        print(f"❌ خطأ في النشر على فيسبوك: {response.text}")
+    return response.status_code == 200
 
 def main():
-    prompts = ["غابة مسحورة", "بطل يبحث عن كنز", "كهف مظلم", "شروق الشمس", "احتفال بالنجاح"]
+    send_telegram_msg("🚀 البوت بدأ العمل الآن...")
+    prompts = ["غابة خيالية", "بطل يكتشف سر", "مغامرة في الصحراء", "شروق الشمس الساحر", "نهاية سعيدة"]
     clips = []
     
     for p in prompts:
@@ -72,10 +82,17 @@ def main():
     if clips:
         final_video = concatenate_videoclips(clips, method="compose")
         final_video.write_videofile("final_story.mp4", fps=24)
-        print("✅ تم إنشاء الفيديو، جاري النشر...")
-        post_to_facebook("final_story.mp4")
+        
+        # النشر على فيسبوك
+        if post_to_facebook("final_story.mp4"):
+            send_telegram_msg("✅ تم النشر على فيسبوك بنجاح!")
+        else:
+            send_telegram_msg("⚠️ تم إنشاء الفيديو ولكن فشل النشر على فيسبوك.")
+            
+        # إرسال الفيديو لتلغرام
+        send_to_telegram("final_story.mp4")
     else:
-        print("❌ لم يتم توليد أي محتوى.")
+        send_telegram_msg("❌ فشلت العملية: لم يتم إنتاج أي فيديو.")
 
 if __name__ == "__main__":
     main()
