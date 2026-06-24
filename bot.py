@@ -1,47 +1,59 @@
 import os
+import asyncio
 import requests
+import edge_tts
 import google.generativeai as genai
-from moviepy.editor import VideoFileClip, concatenate_videoclips
+from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip
+from fal_engine import generate_image
+from pixverse_engine import animate_image
 
-# إعدادات البيئة
-os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
+genai.configure(api_key=os.getenv("GEMINI_KEY"))
 
-# جلب المفاتيح
-GEMINI_KEY = os.getenv("GEMINI_KEY")
-FAL_KEY = os.getenv("FAL_KEY")
-FB_TOKEN = os.getenv("FB_TOKEN")
-FB_PAGE_ID = os.getenv("FB_PAGE_ID")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+def send_telegram(msg):
+    url = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_TOKEN')}/sendMessage"
+    requests.post(url, data={"chat_id": os.getenv("TELEGRAM_CHAT_ID"), "text": msg})
 
-def send_telegram(text):
-    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": text})
+def clean_server():
+    for f in os.listdir("."):
+        if f.endswith((".jpg", ".mp4", ".png", ".mp3")):
+            os.remove(f)
 
-def post_to_facebook(video_path):
-    url = f"https://graph.facebook.com/{FB_PAGE_ID}/videos"
-    files = {"file": open(video_path, 'rb')}
-    data = {"access_token": FB_TOKEN, "description": "قصة جديدة تم توليدها بالذكاء الاصطناعي 🤖✨"}
-    response = requests.post(url, data=data, files=files)
-    return response.status_code == 200
+async def generate_voice(text):
+    communicate = edge_tts.Communicate(text, "ar-SA-ZariNeural")
+    await communicate.save("story_audio.mp3")
 
-def main():
+def run_pipeline():
     try:
-        send_telegram("🚀 البوت بدأ العمل الآن...")
+        send_telegram("🚀 البوت بدأ العمل - إنتاج القصة السينمائية...")
         
-        # [هنا تضع منطق توليد الصور والفيديو الخاص بك]
-        # ...
+        # 1. السكربت
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        prompt = "اكتب قصة فواكه من 5 مشاهد (40 ثانية). لكل مشهد اعطني Prompt سينمائي بالإنجليزية (3D render, Pixar-style, cinematic lighting)."
+        script = model.generate_content(prompt).text
         
-        # بعد انتهاء توليد الفيديو final_story.mp4:
-        if post_to_facebook("final_story.mp4"):
-            send_telegram("✅ تم النشر على فيسبوك بنجاح!")
-        else:
-            send_telegram("⚠️ فشل النشر على فيسبوك.")
-            
+        # 2. توليد الصوت والصور والتحريك
+        asyncio.run(generate_voice(script))
+        images = [generate_image(f"Scene {i}") for i in range(5)]
+        scenes = [animate_image(img) for img in images]
+        
+        # 3. المونتاج
+        clips = [VideoFileClip(s).set_duration(8) for s in scenes]
+        final = concatenate_videoclips(clips, method="compose")
+        final = final.set_audio(AudioFileClip("story_audio.mp3"))
+        final.write_videofile("final_story.mp4", fps=24, codec="libx264", audio_codec="aac")
+        
+        # 4. النشر
+        url = f"https://graph.facebook.com/{os.getenv('FB_PAGE_ID')}/videos"
+        files = {"file": open("final_story.mp4", 'rb')}
+        data = {"access_token": os.getenv("FB_TOKEN"), "description": "قصة اليوم 🍎✨"}
+        requests.post(url, data=data, files=files)
+        
+        send_telegram("✅ تم النشر بنجاح!")
     except Exception as e:
-        send_telegram(f"❌ حدث خطأ فادح: {str(e)}")
+        send_telegram(f"❌ خطأ: {str(e)}")
+    finally:
+        clean_server()
 
 if __name__ == "__main__":
-    main()
+    run_pipeline()
     
