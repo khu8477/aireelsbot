@@ -3,15 +3,7 @@ import asyncio
 import requests
 import edge_tts
 import google.generativeai as genai
-from moviepy.config import change_settings
-
-# إعداد FFMPEG لمونتاج الفيديو
-change_settings({"FFMPEG_BINARY": "ffmpeg"})
 from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip
-
-# استيراد محركات الإنتاج الخاصة بك
-from fal_engine import generate_image
-from pixverse_engine import animate_image
 
 # إعداد Gemini
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
@@ -33,7 +25,7 @@ def clean_server():
                 pass
 
 async def generate_voice(text):
-    """توليد تعليق صوتي احترافي"""
+    """توليد تعليق صوتي"""
     communicate = edge_tts.Communicate(text, "ar-SA-ZariNeural")
     await communicate.save("story_audio.mp3")
 
@@ -43,13 +35,16 @@ def run_pipeline():
         
         # 1. إنشاء السكربت
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
-        prompt = "اكتب قصة فواكه درامية من 5 مشاهد (40 ثانية). لكل مشهد اكتب وصفاً دقيقاً (Prompt) بالإنجليزية بستايل سينمائي 3D."
+        prompt = "اكتب قصة فواكه درامية من 5 مشاهد. لكل مشهد اكتب وصفاً دقيقاً (Prompt) بالإنجليزية بستايل سينمائي."
         script = model.generate_content(prompt).text
         
         # 2. توليد الصوت
         asyncio.run(generate_voice(script))
         
-        # 3. توليد الصور والتحريك
+        # 3. توليد الصور والتحريك (باستيراد الأدوات التي برمجناها)
+        from fal_engine import generate_image
+        from pixverse_engine import animate_image
+        
         images = [generate_image(f"Scene {i}") for i in range(5)]
         scenes = [animate_image(img) for img in images]
         
@@ -77,4 +72,4 @@ def run_pipeline():
 
 if __name__ == "__main__":
     run_pipeline()
-        
+                
