@@ -8,11 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup
+      - name: Setup Environment
         run: |
+          sudo apt-get update
           sudo apt-get install -y ffmpeg
-          pip install google-generativeai requests moviepy edge-tts fal-client
-      - name: Run
+          pip install --upgrade pip
+          pip install google-generativeai requests moviepy edge-tts fal-client telebot
+      - name: Run Bot
         run: python bot.py
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
