@@ -1,6 +1,5 @@
 google-generativeai
 requests
-moviepy
+moviepy==1.0.3
 edge-tts
 fal-client
-telebot
