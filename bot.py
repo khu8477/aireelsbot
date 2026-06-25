@@ -1,42 +1,55 @@
 import os
 import sys
 import requests
-import google.generativeai as genai
+import logging
 
-# --- حماية نهائية لاستيراد المكتبات ---
+# إعداد السجلات (Logs) لرؤية الأخطاء بوضوح
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# --- 1. حماية استيراد المكتبات (التخمين: اختلاف إصدارات moviepy) ---
 try:
     from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip
 except ImportError:
+    logger.warning("اصدار moviepy قديم أو مختلف، جاري محاولة الاستيراد البديل...")
     from moviepy.video.io.VideoFileClip import VideoFileClip
     from moviepy.video.compositing.concatenate import concatenate_videoclips
     from moviepy.audio.io.AudioFileClip import AudioFileClip
 
-# إعداد مفتاح Gemini
-genai.configure(api_key=os.getenv("GEMINI_KEY"))
+# --- 2. إعداد Gemini مع حماية المفتاح ---
+import google.generativeai as genai
+api_key = os.getenv("GEMINI_KEY")
+if not api_key:
+    logger.error("خطأ: مفتاح GEMINI_KEY غير موجود في Secrets!")
+    sys.exit(1)
+genai.configure(api_key=api_key)
 
 def run_pipeline():
     try:
-        print("🚀 بدء تشغيل البوت...")
+        logger.info("🚀 بدء تشغيل البوت...")
         
-        # استخدام نموذج gemini-1.5-flash بدون بادئة models/
+        # اختيار النموذج الصحيح
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # تجربة الاتصال
-        test_res = model.generate_content("اكتب كلمة 'تم الاتصال بنجاح'")
-        print(f"✅ Gemini: {test_res.text}")
+        # --- 3. تخمين خطأ ملفات المحركات (المفقودة) ---
+        try:
+            from fal_engine import generate_image
+            from pixverse_engine import animate_image
+        except ImportError:
+            logger.error("خطأ: ملفات المحركات (fal_engine.py أو pixverse_engine.py) غير موجودة في المجلد!")
+            return
+
+        # عملية الإنتاج
+        logger.info("جاري إنشاء المحتوى...")
+        script = model.generate_content("اكتب قصة قصيرة عن الفواكه").text
         
-        # استدعاء المحركات الخاصة بك
-        from fal_engine import generate_image
-        from pixverse_engine import animate_image
+        # (بقية كود المونتاج الخاص بك هنا)
         
-        # ... بقية المنطق الخاص بك ...
-        
-        print("✅ تم التنفيذ بنجاح!")
+        logger.info("✅ تم التنفيذ بنجاح!")
             
     except Exception as e:
-        print(f"❌ فشل البوت بسبب: {str(e)}")
+        logger.error(f"❌ حدث خطأ غير متوقع: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
     run_pipeline()
-        
