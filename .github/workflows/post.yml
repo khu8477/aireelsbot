@@ -1,6 +1,8 @@
 name: Auto Daily Post
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * *'
 jobs:
   run-bot:
     runs-on: ubuntu-latest
